@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load thumbnail %}
+{% block title %}Пост {{ title }}{% endblock %}
+{% block content %}
+    <div class="container py-5">
+        <div class="row">
+            <aside class="col-12 col-md-3">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">Дата публикации: {{ post.pub_date|date:"d E Y" }}</li>
+                    {% if post.group %}
+                        <li class="list-group-item">
+                          Группа: {{ post.group.title }}
+                            <br>
+                            <a href="{% url 'posts:group_list' post.group.slug %}">#{{ post.group.title }}</a>
+                    {% endif %}                           
+                    </li>
+                    <li class="list-group-item">Автор: {{ post.author.get_full_name }}</li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Всего постов автора: {{ post.author.posts.count }}
+                    </li>
+                    <li class="list-group-item">
+                        <a href="{% url 'posts:profile' post.author.username %}"> @{{ post.author.username }}</a>
+                    </li>
+                </ul>
+            </aside>
+            <article class="col-12 col-md-9">
+                {% thumbnail post.image "960x339" crop="center" upscale=True as im %}
+                <img class="card-img my-2" src="{{ im.url }}">
+                {% endthumbnail %}
+                <p>{{ post.text|linebreaks }}</p>
+                {% include 'includes/comments.html' %}
+                {% if user == post.author %}
+                <a class="btn btn-primary" href="{% url 'posts:post_edit' post.pk %}">Редактировать запись</a>
+                <a button type="button" class="btn btn-danger" href="{% url 'posts:post_delete' post.pk %}">Удалить запись</a>
+                {% endif %}
+            </article>
+        </div>
+    </div>
+{% endblock %}

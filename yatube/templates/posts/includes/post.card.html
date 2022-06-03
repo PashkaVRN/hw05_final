@@ -1,0 +1,24 @@
+{% load user_filters %}
+{% load thumbnail %}
+<article>
+    <ul>
+        <li>
+            {% if author %}
+                {{ author.get_full_name }}
+            {% else %}
+                <a href="{% url 'posts:profile' post.author %}">@{{ post.author.username }}</a>
+            {% endif %}
+            <li>Дата публикации: {{ post.pub_date|date:"d E Y" }}
+            {%if group %}
+            {% elif post.group %}
+                <li><a href="{% url 'posts:group_list' post.group.slug %}">#{{ post.group.title }}</a>
+            {% else %}
+                <li> Запись не состоит не в одном сообществе.
+            {% endif %}
+            {% thumbnail post.image "960x339" crop="center" upscale=True as im %}
+            <img class="card-img my-2" src="{{ im.url }}">
+            {% endthumbnail %}
+            <p>{{ post.text|linebreaks }}</p>
+            <a href="{% url 'posts:post_detail' post.pk %}">подробная информация</a>
+        </li>
+</article>
