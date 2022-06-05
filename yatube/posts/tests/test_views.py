@@ -148,16 +148,20 @@ class PostPagesTests(TestCase):
 
     def test_cache(self):
         """Тест кэша."""
-        cache.clear()
-        response = self.authorized_client.get(reverse('posts:posts_index'))
-        Post.objects.create(
-            text=self.post.text,
+        post = Post.objects.create(
+            text='text',
             author=self.user,
+            group=self.group
         )
+        response = self.authorized_client.get(reverse('posts:posts_index'))
+        response_post = response.context['page_obj'][0]
+        self.assertEqual(post, response_post)
+        post.delete()
         response_2 = self.authorized_client.get(reverse('posts:posts_index'))
-        cache.clear()
-        self.authorized_client.get(reverse('posts:posts_index'))
         self.assertEqual(response.content, response_2.content)
+        cache.clear()
+        response_3 = self.authorized_client.get(reverse('posts:posts_index'))
+        self.assertNotEqual(response.content, response_3.content)
 
 
 class PaginatorViewTest(TestCase):
@@ -249,21 +253,37 @@ class FollowTests(TestCase):
         follower_count = Follow.objects.count()
         self.follower_client.get(reverse(
             'posts:profile_follow',
-            kwargs={'username': self.user_following.username}))
+            args=(self.user_following.username,)))
         self.assertEqual(Follow.objects.count(), follower_count + 1)
 
     def test_unfollow(self):
         """Зарегистрированный пользователь может отписаться."""
+        Follow.objects.create(
+            user=self.user_follower,
+            author=self.user_following
+        )
         self.follower_client.get(reverse(
             'posts:profile_follow',
-            kwargs={'username': self.user_following.username}))
+            args=(self.user_following.username,)))
         follower_count = Follow.objects.count()
         self.follower_client.get(reverse(
             'posts:profile_unfollow',
-            kwargs={'username': self.user_following.username}))
+            args=(self.user_following.username,)))
         self.assertEqual(Follow.objects.count(), follower_count - 1)
 
     def test_new_post_see_follower(self):
         """Пост появляется в ленте подписавшихся."""
-        response = self.following_client.get(reverse('posts:follow_index'))
-        self.assertNotIn(self.post, response.context['page_obj'])
+        posts = Post.objects.create(
+            text=self.post.text,
+            author=self.user_following,
+        )
+        follow = Follow.objects.create(
+            user=self.user_follower,
+            author=self.user_following
+        )
+        response = self.follower_client.get(reverse('posts:follow_index'))
+        post = response.context['page_obj'][0]
+        self.assertEqual(post, posts)
+        follow.delete()
+        response_2 = self.follower_client.get(reverse('posts:follow_index'))
+        self.assertEqual(len(response_2.context['page_obj']), 0)

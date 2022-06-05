@@ -3,20 +3,24 @@
 {% block title %}Все записи пользователя {{ author }}{% endblock %}
 {% block content %}
     <h3>Всего постов: {{ author.posts.count }}</h3>
+    {% if request.user != author %}
+    <form method="post">
+      {% csrf_token %}
     {% if following %}
-    <a
-      class="btn btn-lg btn-light"
-      href="{% url 'posts:profile_unfollow' author.username %}" role="button"
-    >
-      Отписаться
-    </a>
-  {% else %}
-      <a
-        class="btn btn-lg btn-primary"
-        href="{% url 'posts:profile_follow' author.username %}" role="button"
-      >
-        Подписаться
+        <a
+          class="btn btn-lg btn-light"
+          href="{% url 'posts:profile_unfollow' author.username %}" role="button"
+        >
+          Отписаться
+        </a>
+    {% else %}
+        <a
+          class="btn btn-lg btn-primary"
+          href="{% url 'posts:profile_follow' author.username %}" role="button"
+        >
+          Подписаться
       </a>
+   {% endif %}
    {% endif %}
     {% for post in page_obj %}
         {% include 'posts/includes/post.card.html' %}
