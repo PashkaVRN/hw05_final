@@ -76,7 +76,7 @@ class PostPagesTests(TestCase):
         self.assertEqual(post.author, self.user)
         self.assertEqual(post.group, self.group)
         self.assertEqual(post.image.name, f'posts/{self.uploaded}')
-        self.assertContains(response, '<img', count=1)
+        self.assertContains(response, '<img', count=2)
 
     def test_pages_uses_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
