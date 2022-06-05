@@ -33,28 +33,44 @@ class PostURLTests(TestCase):
         self.authorized_client.force_login(self.user)
         self.authorized_client_no_author.force_login(self.user_1)
         self.url_templates_names = (
-            ('posts:posts_index', None, 'posts/index.html', '/'),
-            ('posts:group_list', (self.group.slug,), 'posts/group_list.html',
-             f'/group/{self.group.slug}/'),
-            ('posts:profile', (self.user.username,), 'posts/profile.html',
-             f'/profile/{self.user.username}/'),
-            ('posts:post_edit', (self.post.pk,), 'posts/create_post.html',
-             f'/posts/{self.post.pk}/edit/'),
-            ('posts:post_detail', (self.post.pk,), 'posts/post_detail.html',
-             f'/posts/{self.post.pk}/'),
-            ('posts:post_create', None, 'posts/create_post.html', '/create/'),
+            ('posts:posts_index', None, '/', HTTPStatus.OK),
+            ('posts:group_list', (self.group.slug,),
+             f'/group/{self.group.slug}/', HTTPStatus.OK),
+            ('posts:profile', (self.user.username,),
+             f'/profile/{self.user.username}/', HTTPStatus.OK),
+            ('posts:post_edit', (self.post.pk,),
+             f'/posts/{self.post.pk}/edit/', HTTPStatus.OK),
+            ('posts:post_detail', (self.post.pk,),
+             f'/posts/{self.post.pk}/', HTTPStatus.OK),
+            ('posts:post_create', None, '/create/', HTTPStatus.OK),
+            ('posts:follow_index', None, '/follow/', HTTPStatus.OK),
+            ('posts:profile_unfollow', (self.user.username,),
+             f'/profile/{self.user.username}/unfollow/', HTTPStatus.FOUND),
+            ('posts:add_comment', (self.post.pk,),
+             f'/posts/{self.post.pk}/comment/', HTTPStatus.FOUND),
+            ('posts:profile_follow', (self.user.username,),
+             f'/profile/{self.user.username}/follow/', HTTPStatus.FOUND),
         )
 
     def test_revers(self):
         """Проверка реверсов."""
-        for url, args, _, hard_link in self.url_templates_names:
+        for url, args, hard_link, status in self.url_templates_names:
             reverse_name = reverse(url, args=args)
             with self.subTest(reverse_name=hard_link):
                 self.assertEqual(reverse_name, hard_link)
 
     def test_urls_uses_correct_template(self):
         """Проверяем, что URL-адрес использует соответствующий шаблон."""
-        for address, args, template, _ in self.url_templates_names:
+        test_template = (
+            ('posts:posts_index', None, 'posts/index.html'),
+            ('posts:group_list', (self.group.slug,), 'posts/group_list.html'),
+            ('posts:profile', (self.user.username,), 'posts/profile.html'),
+            ('posts:post_edit', (self.post.pk,), 'posts/create_post.html'),
+            ('posts:post_detail', (self.post.pk,), 'posts/post_detail.html'),
+            ('posts:post_create', None, 'posts/create_post.html'),
+            ('posts:follow_index', None, 'posts/follow.html'),
+        )
+        for address, args, template in test_template:
             reverse_name = reverse(address, args=args)
             with self.subTest(reverse_name=reverse_name):
                 response = self.authorized_client.get(reverse_name)
@@ -62,19 +78,20 @@ class PostURLTests(TestCase):
 
     def test_author_page(self):
         """Тесты доступности автору."""
-        for address, args, _, _ in self.url_templates_names:
+        for address, args, _, status in self.url_templates_names:
             reverse_name = reverse(address, args=args)
             with self.subTest(address=address):
                 response = self.authorized_client.get(reverse_name)
-                self.assertEqual(response.status_code, HTTPStatus.OK)
+                self.assertEqual(response.status_code, status)
 
     def test_guest_users_page(self):
         """Тестируем доступность страниц неавторизованными пользователями."""
         three_hundred_two_found_address = (
             'posts:post_edit',
             'posts:post_create',
+            'posts:follow_index',
         )
-        for address, args, _, _ in self.url_templates_names:
+        for address, args, _, status in self.url_templates_names:
             reverse_name = reverse(address, args=args)
             with self.subTest(reverse_name=reverse_name):
                 if address in three_hundred_two_found_address:
@@ -87,12 +104,12 @@ class PostURLTests(TestCase):
                     )
                 else:
                     response = self.client.get(reverse_name)
-                    self.assertEqual(response.status_code, HTTPStatus.OK)
+                    self.assertEqual(response.status_code, status)
 
     def test_for_user(self):
         """Тестируем доступность страниц для автора."""
         three_hundred_two_found_address = ('posts:post_edit',)
-        for address, args, _, _ in self.url_templates_names:
+        for address, args, _, status in self.url_templates_names:
             reverse_name = reverse(address, args=args)
             with self.subTest(reverse_name=reverse_name):
                 if address in three_hundred_two_found_address:
@@ -103,7 +120,7 @@ class PostURLTests(TestCase):
                         response, redirect_name, HTTPStatus.FOUND)
                 else:
                     response = self.authorized_client.get(reverse_name)
-                    self.assertEqual(response.status_code, HTTPStatus.OK)
+                    self.assertEqual(response.status_code, status)
 
     def test_404_page(self):
         """Проверка 404 для несуществующих страниц."""
