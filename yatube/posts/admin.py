@@ -18,26 +18,16 @@ class GroupAdmin(admin.ModelAdmin):
 
 
 class CommentAdmin(admin.ModelAdmin):
-    list_display = ('author', 'text', 'pub_date')
-    search_fields = ('author', 'text')
+    list_display = ('author', 'text', 'created')
+    search_fields = ('author', 'text',)
 
 
 class FollowAdmin(admin.ModelAdmin):
-    list_display = ('user', 'author')
-    search_fields = ('user', 'author')
-
-
-class CommentAdmin(admin.ModelAdmin):
-    list_display = ('author', 'text', 'pub_date')
-    search_fields = ('author', 'text')
-
-
-class FollowAdmin(admin.ModelAdmin):
-    list_display = ('user', 'author')
-    search_fields = ('user', 'author')
+    list_display = ('user', 'author',)
+    search_fields = ('user', 'author',)
 
 
 admin.site.register(Group, GroupAdmin)
 admin.site.register(Post, PostAdmin)
-admin.site.register(Comment)
-admin.site.register(Follow)
+admin.site.register(Comment, CommentAdmin)
+admin.site.register(Follow, FollowAdmin)

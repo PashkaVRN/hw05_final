@@ -4,8 +4,6 @@
 {% block content %}
     <h3>Всего постов: {{ author.posts.count }}</h3>
     {% if request.user != author %}
-    <form method="post">
-      {% csrf_token %}
     {% if following %}
         <a
           class="btn btn-lg btn-light"

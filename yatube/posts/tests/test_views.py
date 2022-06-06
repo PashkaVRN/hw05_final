@@ -51,14 +51,6 @@ class PostPagesTests(TestCase):
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
         cache.clear()
-        self.url_templates_names = (
-            ('posts:posts_index', None, 'posts/index.html'),
-            ('posts:group_list', (self.group.slug,), 'posts/group_list.html'),
-            ('posts:profile', (self.user.username,), 'posts/profile.html'),
-            ('posts:post_edit', (self.post.pk,), 'posts/create_post.html'),
-            ('posts:post_detail', (self.post.pk,), 'posts/post_detail.html'),
-            ('posts:post_create', None, 'posts/create_post.html'),
-        )
 
     @classmethod
     def tearDownClass(cls):
@@ -77,14 +69,6 @@ class PostPagesTests(TestCase):
         self.assertEqual(post.group, self.group)
         self.assertEqual(post.image.name, f'posts/{self.uploaded}')
         self.assertContains(response, '<img', count=2)
-
-    def test_pages_uses_correct_template(self):
-        """URL-адрес использует соответствующий шаблон."""
-        for address, args, template in self.url_templates_names:
-            reverse_name = reverse(address, args=args)
-            with self.subTest(reverse_name=reverse_name):
-                response = self.authorized_client.get(reverse_name)
-                self.assertTemplateUsed(response, template)
 
     def test_index_page_show_correct_context(self):
         """Шаблон index сформирован с правильным контекстом."""
@@ -263,9 +247,6 @@ class FollowTests(TestCase):
             user=self.user_follower,
             author=self.user_following
         )
-        self.follower_client.get(reverse(
-            'posts:profile_follow',
-            args=(self.user_following.username,)))
         follower_count = Follow.objects.count()
         self.follower_client.get(reverse(
             'posts:profile_unfollow',

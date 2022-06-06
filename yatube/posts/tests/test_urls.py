@@ -33,28 +33,30 @@ class PostURLTests(TestCase):
         self.authorized_client.force_login(self.user)
         self.authorized_client_no_author.force_login(self.user_1)
         self.url_templates_names = (
-            ('posts:posts_index', None, '/', HTTPStatus.OK),
+            ('posts:posts_index', None, '/'),
             ('posts:group_list', (self.group.slug,),
-             f'/group/{self.group.slug}/', HTTPStatus.OK),
+             f'/group/{self.group.slug}/'),
             ('posts:profile', (self.user.username,),
-             f'/profile/{self.user.username}/', HTTPStatus.OK),
+             f'/profile/{self.user.username}/'),
             ('posts:post_edit', (self.post.pk,),
-             f'/posts/{self.post.pk}/edit/', HTTPStatus.OK),
+             f'/posts/{self.post.pk}/edit/'),
             ('posts:post_detail', (self.post.pk,),
-             f'/posts/{self.post.pk}/', HTTPStatus.OK),
-            ('posts:post_create', None, '/create/', HTTPStatus.OK),
-            ('posts:follow_index', None, '/follow/', HTTPStatus.OK),
+             f'/posts/{self.post.pk}/'),
+            ('posts:post_create', None, '/create/'),
+            ('posts:follow_index', None, '/follow/'),
             ('posts:profile_unfollow', (self.user.username,),
-             f'/profile/{self.user.username}/unfollow/', HTTPStatus.FOUND),
+             f'/profile/{self.user.username}/unfollow/'),
             ('posts:add_comment', (self.post.pk,),
-             f'/posts/{self.post.pk}/comment/', HTTPStatus.FOUND),
+             f'/posts/{self.post.pk}/comment/'),
             ('posts:profile_follow', (self.user.username,),
-             f'/profile/{self.user.username}/follow/', HTTPStatus.FOUND),
+             f'/profile/{self.user.username}/follow/'),
+            ('posts:post_delete', (self.post.pk,),
+             f'/posts/{self.post.pk}/delete/')
         )
 
     def test_revers(self):
         """Проверка реверсов."""
-        for url, args, hard_link, status in self.url_templates_names:
+        for url, args, hard_link in self.url_templates_names:
             reverse_name = reverse(url, args=args)
             with self.subTest(reverse_name=hard_link):
                 self.assertEqual(reverse_name, hard_link)
@@ -78,11 +80,32 @@ class PostURLTests(TestCase):
 
     def test_author_page(self):
         """Тесты доступности автору."""
-        for address, args, _, status in self.url_templates_names:
+        redirect_profile = (
+            'posts:post_delete',
+            'posts:profile_follow',
+            'posts:profile_unfollow',
+        )
+        redirect_detail = (
+            'posts:add_comment',
+        )
+        for address, args, _ in self.url_templates_names:
             reverse_name = reverse(address, args=args)
             with self.subTest(address=address):
-                response = self.authorized_client.get(reverse_name)
-                self.assertEqual(response.status_code, status)
+                if address in redirect_profile:
+                    response = self.authorized_client.get(
+                        reverse_name, follow=True
+                    )
+                    rederict = reverse('posts:profile', args=(self.user,))
+                    self.assertRedirects(response, rederict, HTTPStatus.FOUND)
+                elif address in redirect_detail:
+                    response = self.authorized_client.get(
+                        reverse_name, follow=True
+                    )
+                    rederict = reverse('posts:post_detail', args=args)
+                    self.assertRedirects(response, rederict, HTTPStatus.FOUND)
+                else:
+                    response = self.authorized_client.get(reverse_name)
+                    self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_guest_users_page(self):
         """Тестируем доступность страниц неавторизованными пользователями."""
@@ -90,8 +113,12 @@ class PostURLTests(TestCase):
             'posts:post_edit',
             'posts:post_create',
             'posts:follow_index',
+            'posts:add_comment',
+            'posts:profile_follow',
+            'posts:profile_unfollow',
+            'posts:post_delete',
         )
-        for address, args, _, status in self.url_templates_names:
+        for address, args, _ in self.url_templates_names:
             reverse_name = reverse(address, args=args)
             with self.subTest(reverse_name=reverse_name):
                 if address in three_hundred_two_found_address:
@@ -104,23 +131,38 @@ class PostURLTests(TestCase):
                     )
                 else:
                     response = self.client.get(reverse_name)
-                    self.assertEqual(response.status_code, status)
+                    self.assertEqual(response.status_code, HTTPStatus.OK)
 
-    def test_for_user(self):
-        """Тестируем доступность страниц для автора."""
-        three_hundred_two_found_address = ('posts:post_edit',)
-        for address, args, _, status in self.url_templates_names:
+    def test_authorized_no_author(self):
+        """Тесты авторизованного не автора."""
+        redirect_profile = (
+            'posts:profile_follow',
+            'posts:profile_unfollow',
+        )
+        redirect_detail = (
+            'posts:add_comment',
+            'posts:post_edit',
+            'posts:post_delete',
+        )
+        for address, args, _ in self.url_templates_names:
             reverse_name = reverse(address, args=args)
-            with self.subTest(reverse_name=reverse_name):
-                if address in three_hundred_two_found_address:
+            with self.subTest(address=address):
+                if address in redirect_profile:
                     response = self.authorized_client_no_author.get(
-                        reverse_name, follow=True)
-                    redirect_name = reverse('posts:post_detail', args=args)
-                    self.assertRedirects(
-                        response, redirect_name, HTTPStatus.FOUND)
+                        reverse_name, follow=True
+                    )
+                    rederict = reverse('posts:profile', args=(self.user,))
+                    self.assertRedirects(response, rederict, HTTPStatus.FOUND)
+                elif address in redirect_detail:
+                    response = self.authorized_client_no_author.get(
+                        reverse_name, follow=True
+                    )
+                    rederict = reverse('posts:post_detail', args=args)
+                    self.assertRedirects(response, rederict, HTTPStatus.FOUND)
                 else:
-                    response = self.authorized_client.get(reverse_name)
-                    self.assertEqual(response.status_code, status)
+                    response = self.authorized_client_no_author.get(
+                        reverse_name)
+                    self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_404_page(self):
         """Проверка 404 для несуществующих страниц."""
