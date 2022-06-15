@@ -19,4 +19,8 @@ urlpatterns = [
          name='profile_follow'),
     path('profile/<str:username>/unfollow/', views.profile_unfollow,
          name='profile_unfollow'),
+    path('group/<slug:slug>/follow/', views.group_follow,
+         name='group_follow'),
+    path('group/<slug:slug>/unfollow/', views.group_unfollow,
+         name='group_unfollow'),
 ]

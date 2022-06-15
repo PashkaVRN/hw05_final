@@ -4,6 +4,21 @@
 {% block content %}
     <div class="container">
         <h1>{{ group.title }}</h1>
+        {% if followin %}
+        <a
+          class="btn btn-lg btn-light"
+          href="{% url 'posts:group_unfollow' group.slug %}" role="button"
+        >
+          Отписаться
+        </a>
+    {% else %}
+        <a
+          class="btn btn-lg btn-primary"
+          href="{% url 'posts:group_follow' group.slug %}" role="button"
+        >
+          Подписаться
+      </a>
+       {% endif %}
         <p>{{ group.description|linebreaks }}</p>
         {% for post in page_obj %}
         {% include 'posts/includes/post.card.html' %}

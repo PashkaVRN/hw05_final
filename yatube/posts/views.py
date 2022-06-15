@@ -2,8 +2,9 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import CommentForm, PostForm
-from .models import Follow, Group, Post, User
+from .models import Follow, Group, Post, User, FollowGroup
 from .utils import paginator
+from django.db.models import Q
 
 
 def index(request):
@@ -17,9 +18,12 @@ def index(request):
 def group_posts(request, slug):
     group = get_object_or_404(Group, slug=slug)
     posts_list = group.posts.select_related('author').all()
+    followin = request.user.is_authenticated and group.followin.filter(
+        user=request.user).exists()
     context = {
         'group': group,
         'page_obj': paginator(request, posts_list),
+        'followin': followin
     }
     return render(request, 'posts/group_list.html', context)
 
@@ -98,8 +102,10 @@ def add_comment(request, post_id):
 
 @login_required
 def follow_index(request):
-    follow_list = Follow.objects.filter(user=request.user)
-    post_list = Post.objects.filter(author__in=follow_list.values('author'))
+    post_list = Post.objects.select_related('author', 'group').filter(
+        Q(author__following__user=request.user)
+        | Q(group__followin__user=request.user))
+#   post_list = Post.objects.filter(author__in=follow_list.values('author'))
     context = {'page_obj': paginator(request, post_list)}
     return render(request, 'posts/follow.html', context)
 
@@ -120,3 +126,21 @@ def profile_unfollow(request, username):
     Follow.objects.filter(
         user=request.user, author__username=username).delete()
     return redirect('posts:profile', username)
+
+
+@login_required
+def group_follow(request, slug):
+    group = get_object_or_404(Group, slug=slug)
+    if not FollowGroup.objects.filter(user=request.user, group=group).exists():
+        new_follow = FollowGroup(user=request.user, group=group)
+        new_follow.save()
+    return redirect('posts:group_list', slug=slug)
+
+
+@login_required
+def group_unfollow(request, slug):
+    group = get_object_or_404(Group, slug=slug)
+    follows = FollowGroup.objects.filter(user=request.user, group=group)
+    if follows.exists():
+        follows.delete()
+    return redirect('posts:group_list', slug=slug)
